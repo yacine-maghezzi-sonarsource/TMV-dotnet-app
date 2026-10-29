@@ -7,6 +7,8 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
 	<PreserveCompilationContext>true</PreserveCompilationContext>
+	<!-- Keep the intentionally downgraded vulnerable pins (e.g. System.Drawing.Common 4.7.0) restorable -->
+	<NoWarn>$(NoWarn);NU1605</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
