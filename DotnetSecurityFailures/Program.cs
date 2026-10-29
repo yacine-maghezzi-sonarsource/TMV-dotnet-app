@@ -163,19 +163,6 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
-// VULNERABLE: Directory browsing enabled for uploads folder
-var uploadsPath = Path.Combine(builder.Environment.WebRootPath, "uploads");
-Directory.CreateDirectory(uploadsPath);
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads"
-});
-app.UseDirectoryBrowser(new DirectoryBrowserOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads"
-});
 
 // VULNERABLE: Directory browsing enabled for logs folder
 var logsPath = Path.Combine(builder.Environment.WebRootPath, "logs");
