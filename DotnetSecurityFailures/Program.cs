@@ -19,6 +19,8 @@ builder.Services.AddScoped<VulnerableLdapService>();
 builder.Services.AddScoped<VulnerableNoSQLService>();
 builder.Services.AddScoped<VulnerableXMLService>();
 builder.Services.AddScoped<CatalogImportService>();
+builder.Services.AddScoped<LedgerRepository>();
+builder.Services.AddScoped<StatementArchiveService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
