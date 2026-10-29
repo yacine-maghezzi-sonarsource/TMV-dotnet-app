@@ -9,7 +9,7 @@
 <VulnerabilityLayout Slug="missing-rate-limiting" VulnerableCode="@VulnerableCode" SafeCode="@SafeCode">
     <DemoContent>
         <h6>PIN Authentication System:</h6>
-        <p class="small text-muted">Attempt to login with 4-digit PIN (no rate limiting)</p>
+        <p class="small text-muted">Attempt to login with a 4-digit PIN</p>
 
         <div class="mb-3">
             <label class="form-label">Enter PIN (4 digits):</label>
@@ -246,7 +246,12 @@ for (int i = 0; i < 10000; i++)
 
             var responseData = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
-            if (response.IsSuccessStatusCode && responseData?.Success == true)
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                resultCssClass = "alert alert-warning";
+                result = $"Login blocked: {responseData?.Message ?? "Too many login attempts. Please try again later."}";
+            }
+            else if (response.IsSuccessStatusCode && responseData?.Success == true)
             {
                 resultCssClass = "alert alert-success";
                 result = $"Login successful!\n\n{responseData.Message}\n{responseData.SecretData}";
@@ -254,7 +259,7 @@ for (int i = 0; i < 10000; i++)
             else
             {
                 resultCssClass = "alert alert-danger";
-                result = $"Login failed: {responseData?.Message ?? "Invalid PIN"}\n\nAttempts made: {attemptCount}\nNO RATE LIMITING - Can try unlimited times!";
+                result = $"Login failed: {responseData?.Message ?? "Invalid PIN"}\n\nAttempts made from this page: {attemptCount}";
             }
         }
         catch (Exception ex)
@@ -276,11 +281,12 @@ for (int i = 0; i < 10000; i++)
 
         try
         {
-            result = "Brute force attack in progress...\n\n";
+            result = "Brute force attempt in progress...\n\n";
             StateHasChanged();
 
             var startTime = DateTime.Now;
             var foundPin = "";
+            var wasThrottled = false;
 
             for (int i = 0; i <= 9999; i++)
             {
@@ -292,36 +298,44 @@ for (int i = 0; i < 10000; i++)
                     new { Pin = testPin }
                 );
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseData = await response.Content.ReadFromJsonAsync<LoginResponse>();
-                    if (responseData?.Success == true)
-                    {
-                        foundPin = testPin;
-                        var duration = (DateTime.Now - startTime).TotalSeconds;
+                var responseData = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
-                        result = "VULNERABILITY EXPLOITED!\n\n";
-                        result += $"Brute force attack successful:\n";
-                        result += $"- Correct PIN found: {foundPin}\n";
-                        result += $"- Attempts made: {attemptCount}\n";
-                        result += $"- Time taken: {duration:F2} seconds\n";
-                        result += $"- Rate: {attemptCount / duration:F0} attempts/second\n\n";
-                        result += $"Secret data obtained:\n{responseData.SecretData}\n\n";
-                        
-                        break;
-                    }
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    wasThrottled = true;
+                    resultCssClass = "alert alert-warning";
+                    result = "Brute force attempt stopped by the server.\n\n";
+                    result += $"{responseData?.Message ?? "Too many login attempts. Please try again later."}\n";
+                    result += $"Shared allowance exhausted after {attemptCount} total requests from this page.";
+                    break;
+                }
+
+                if (response.IsSuccessStatusCode && responseData?.Success == true)
+                {
+                    foundPin = testPin;
+                    var duration = (DateTime.Now - startTime).TotalSeconds;
+
+                    resultCssClass = "alert alert-success";
+                    result = "PIN accepted before the shared allowance was exhausted.\n\n";
+                    result += $"Accepted PIN: {foundPin}\n";
+                    result += $"- Attempts made: {attemptCount}\n";
+                    result += $"- Time taken: {duration:F2} seconds\n";
+                    result += $"- Rate: {attemptCount / duration:F0} attempts/second\n\n";
+                    result += $"Secret data obtained:\n{responseData.SecretData}\n\n";
+
+                    break;
                 }
 
                 if (i % 100 == 0)
                 {
-                    result = $"Brute force attack in progress...\n\nTested {i}/10000 PINs ({attemptCount} total attempts)";
+                    result = $"Brute force attempt in progress...\n\nTested {i}/10000 PINs ({attemptCount} total attempts)";
                     StateHasChanged();
                 }
             }
 
-            if (string.IsNullOrEmpty(foundPin))
+            if (string.IsNullOrEmpty(foundPin) && !wasThrottled)
             {
-                result += "\n\nAttack completed but PIN not found in tested range.";
+                result += "\n\nAttempt completed without finding a valid PIN in the tested range.";
             }
         }
         catch (Exception ex)

@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents()
 
 // Core services
 builder.Services.AddSingleton<VulnerabilityService>();
+builder.Services.AddSingleton<LoginAttemptAllowanceService>();
 builder.Services.AddScoped<VulnerableDatabaseService>();
 builder.Services.AddScoped<VulnerableCommandService>();
 builder.Services.AddScoped<VulnerableLdapService>();

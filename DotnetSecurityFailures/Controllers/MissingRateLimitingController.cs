@@ -1,3 +1,4 @@
+using DotnetSecurityFailures.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotnetSecurityFailures.Controllers;
@@ -15,10 +16,14 @@ namespace DotnetSecurityFailures.Controllers;
 public class MissingRateLimitingController : VulnerabilityDemoControllerBase
 {
     private const string CorrectPin = "7384";
+    private readonly LoginAttemptAllowanceService _loginAttemptAllowanceService;
 
-    public MissingRateLimitingController(ILogger<MissingRateLimitingController> logger)
+    public MissingRateLimitingController(
+        ILogger<MissingRateLimitingController> logger,
+        LoginAttemptAllowanceService loginAttemptAllowanceService)
         : base(logger, "missing-rate-limiting")
     {
+        _loginAttemptAllowanceService = loginAttemptAllowanceService;
     }
 
     // VULNERABLE: No rate limiting on authentication endpoint
@@ -26,6 +31,15 @@ public class MissingRateLimitingController : VulnerabilityDemoControllerBase
     public IActionResult Login([FromBody] LoginRequest request)
     {
         LogDemoActivity("Login", $"Login attempt with PIN: {request.Pin}");
+
+        if (!_loginAttemptAllowanceService.TryConsumeAttempt("pin-login"))
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, new LoginResponse
+            {
+                Success = false,
+                Message = "Too many login attempts. Please try again later."
+            });
+        }
         
         if (string.IsNullOrWhiteSpace(request.Pin))
         {
