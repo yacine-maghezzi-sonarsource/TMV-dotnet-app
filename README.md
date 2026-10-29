@@ -216,6 +216,38 @@ This is an interactive educational project that demonstrates common security vul
 
 ---
 
+### OWASP Top 10 (2025), Supply Chain, Secrets, Shell & R
+
+- **OWASP Top 10 (2025) business API**, written like a payments back end ("Northwind Pay")  
+  | Controller | Categories |
+  |---|---|
+  | [AccountsController](DotnetSecurityFailures/Controllers/AccountsController.cs) | A01 access control, A02 insecure cookie, A06 predictable reset code, A07 hardcoded credentials |
+  | [PaymentsController](DotnetSecurityFailures/Controllers/PaymentsController.cs) | A04 static key/IV, ECB, MD5, A09 card data in logs |
+  | [OrdersController](DotnetSecurityFailures/Controllers/OrdersController.cs) | A05 SQL injection, ReDoS, path traversal |
+  | [PlatformController](DotnetSecurityFailures/Controllers/PlatformController.cs) | A02 env dump, A03 unsigned plugin load, A05 command injection, A08 unsafe deserialization and unverified update |
+  | [InvoicesController](DotnetSecurityFailures/Controllers/InvoicesController.cs) | A10 fail-open authorization, stack traces to client |
+
+- **[Vulnerable NuGet dependencies](DotnetSecurityFailures/DotnetSecurityFailures.csproj)** (CWE-1395)  
+  log4net, SharpZipLib, DotNetZip, YamlDotNet, Npgsql, Microsoft.Data.SqlClient and others pinned to versions with known CVEs
+
+- **[Reachable dependency CVEs](DotnetSecurityFailures/Services/CatalogImportService.cs)**  
+  Called from [ImportsController](DotnetSecurityFailures/Controllers/ImportsController.cs), so SCA reachability marks these direct-dependency CVEs as *Reachable*:
+  YamlDotNet `Deserializer.Deserialize` (CVE-2018-1000210), SharpZipLib `TarArchive.ExtractContents` (CVE-2021-32840), log4net `XmlConfigurator.Configure` (CVE-2018-1285)
+
+- **[Vulnerable and malicious npm packages](client/package.json)** (CWE-506)  
+  Known CVEs (lodash, axios, jquery, minimist...) plus compromised releases (event-stream 3.3.6/flatmap-stream, ua-parser-js 0.7.29, coa 2.0.3, rc 1.2.9, eslint-scope 3.7.2, chalk 5.6.1, debug 4.4.2, @ctrl/tinycolor 4.1.1). **Never run `npm install` in `client/`.**
+
+- **[Hardcoded secrets](DotnetSecurityFailures/Configuration/ServiceCredentials.cs)** (CWE-798)  
+  Fake credentials with real entropy in provider formats (AWS, GitHub, Slack, Stripe, Azure, OpenAI...), also in [appsettings.Production.json](DotnetSecurityFailures/appsettings.Production.json) and a committed [private key](DotnetSecurityFailures/Configuration/jwt-signing-key.pem)
+
+- **[Badly written shell scripts](scripts/)** (CWE-78)  
+  `eval` on input, `curl | bash`, unquoted variables, `rm -rf $VAR/*`, `chmod 777`, passwords on the command line
+
+- **[Badly written R script](analytics/fraud_report.R)** (CWE-89, CWE-94, CWE-502)  
+  SQL and code injection, `system()` with pasted input, `readRDS(url())` (CVE-2024-27322), R anti-patterns
+
+---
+
 ## How to Use This Project
 
 1. **Browse the Categories**: Start from the home page and explore vulnerabilities by category
