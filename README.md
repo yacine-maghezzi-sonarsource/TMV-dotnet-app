@@ -226,6 +226,9 @@ This is an interactive educational project that demonstrates common security vul
   | [OrdersController](DotnetSecurityFailures/Controllers/OrdersController.cs) | A05 SQL injection, ReDoS, path traversal |
   | [PlatformController](DotnetSecurityFailures/Controllers/PlatformController.cs) | A02 env dump, A03 unsigned plugin load, A05 command injection, A08 unsafe deserialization and unverified update |
   | [InvoicesController](DotnetSecurityFailures/Controllers/InvoicesController.cs) | A10 fail-open authorization, stack traces to client |
+  | [LedgerController](DotnetSecurityFailures/Controllers/LedgerController.cs) | A05 SQL injection through Npgsql and SqlClient, A01 unrestricted upload, zip slip via DotNetZip |
+  | [PartnerAuthController](DotnetSecurityFailures/Controllers/PartnerAuthController.cs) | A07 JWT accepted without signature, issuer or lifetime validation |
+  | [WebhooksController](DotnetSecurityFailures/Controllers/WebhooksController.cs) | A01 SSRF via merchant callback, A08 optional HMAC-SHA1 signature and TypeNameHandling, A09 payload logging |
 
 - **[Vulnerable NuGet dependencies](DotnetSecurityFailures/DotnetSecurityFailures.csproj)** (CWE-1395)  
   log4net, SharpZipLib, DotNetZip, YamlDotNet, Npgsql, Microsoft.Data.SqlClient and others pinned to versions with known CVEs
