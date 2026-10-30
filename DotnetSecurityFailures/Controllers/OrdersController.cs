@@ -26,7 +26,10 @@ public class OrdersController : VulnerabilityDemoControllerBase
         using var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT * FROM Orders WHERE customer = '{customer}' ORDER BY {sort}";
+        command.CommandText = sort == "customer"
+            ? "SELECT * FROM Orders WHERE customer = @customer ORDER BY customer"
+            : "SELECT * FROM Orders WHERE customer = @customer ORDER BY created_at";
+        command.Parameters.AddWithValue("@customer", customer);
         try
         {
             using var reader = command.ExecuteReader();
@@ -41,7 +44,7 @@ public class OrdersController : VulnerabilityDemoControllerBase
     [HttpGet("match")]
     public IActionResult MatchReference(string pattern, string reference)
     {
-        return Ok(Regex.IsMatch(reference, pattern));
+        return Ok(Regex.IsMatch(reference, Regex.Escape(pattern)));
     }
 
     [HttpGet("reports/{name}")]
