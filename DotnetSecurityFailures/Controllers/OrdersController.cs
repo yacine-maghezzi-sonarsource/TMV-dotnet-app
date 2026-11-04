@@ -47,7 +47,18 @@ public class OrdersController : VulnerabilityDemoControllerBase
     [HttpGet("reports/{name}")]
     public IActionResult DownloadReport(string name)
     {
-        var path = Path.Combine(_environment.ContentRootPath, "Documents", name);
+        var documentsPath = Path.GetFullPath(Path.Combine(_environment.ContentRootPath, "Documents"));
+        if (!documentsPath.EndsWith(Path.DirectorySeparatorChar))
+        {
+            documentsPath += Path.DirectorySeparatorChar;
+        }
+
+        var path = Path.GetFullPath(Path.Combine(documentsPath, name));
+        if (!path.StartsWith(documentsPath, StringComparison.Ordinal))
+        {
+            return BadRequest();
+        }
+
         return Ok(System.IO.File.ReadAllText(path));
     }
 }

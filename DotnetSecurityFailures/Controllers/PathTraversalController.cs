@@ -41,15 +41,21 @@ public class PathTraversalController : VulnerabilityDemoControllerBase
             return BadRequest(new { success = false, message = "Filename is required" });
         }
 
-        // VULNERABLE: User input directly concatenated to path
         var filePath = Path.Combine(DocumentsPath, filename);
+        var canonicalDocumentsPath = Path.GetFullPath(DocumentsPath + Path.DirectorySeparatorChar);
+        var canonicalFilePath = Path.GetFullPath(filePath);
 
-        if (!System.IO.File.Exists(filePath))
+        if (!canonicalFilePath.StartsWith(canonicalDocumentsPath, StringComparison.Ordinal))
+        {
+            return BadRequest(new { success = false, message = "Invalid filename" });
+        }
+
+        if (!System.IO.File.Exists(canonicalFilePath))
         {
             return NotFound(new { success = false, message = "File not found" });
         }
 
-        var fileContent = System.IO.File.ReadAllText(filePath);
+        var fileContent = System.IO.File.ReadAllText(canonicalFilePath);
 
         return Ok(new
         {

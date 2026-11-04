@@ -42,26 +42,27 @@ public class ArbitraryFileWriteController : VulnerabilityDemoControllerBase
 
         try
         {
-            // VULNERABLE: Direct path concatenation without validation
-            var filePath = Path.Combine(_baseDirectory, request.FileName);
-            
-            System.IO.File.WriteAllText(filePath, request.Content);
+            var baseDirectoryPath = Path.GetFullPath(_baseDirectory);
+            if (!baseDirectoryPath.EndsWith(Path.DirectorySeparatorChar))
+            {
+                baseDirectoryPath += Path.DirectorySeparatorChar;
+            }
 
-            var actualPath = Path.GetFullPath(filePath);
-            var isOutsideBase = !actualPath.StartsWith(
-                Path.GetFullPath(_baseDirectory), 
-                StringComparison.OrdinalIgnoreCase
-            );
+            var actualPath = Path.GetFullPath(Path.Combine(baseDirectoryPath, request.FileName));
+            if (!actualPath.StartsWith(baseDirectoryPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { success = false, message = "Invalid filename", fileName = request.FileName });
+            }
+
+            System.IO.File.WriteAllText(actualPath, request.Content);
 
             return Ok(new
             {
                 success = true,
                 fileName = request.FileName,
                 actualPath = actualPath,
-                isVulnerable = isOutsideBase,
-                message = isOutsideBase 
-                    ? "ARBITRARY FILE WRITE SUCCESSFUL!" 
-                    : "Backup saved successfully"
+                isVulnerable = false,
+                message = "Backup saved successfully"
             });
         }
         catch (Exception ex)
