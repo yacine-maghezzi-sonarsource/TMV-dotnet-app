@@ -39,80 +39,86 @@ public class ZipSlipController : VulnerabilityDemoControllerBase
 
         try
         {
-            var tempZipPath = Path.GetTempFileName();
-            using (var stream = new FileStream(tempZipPath, FileMode.Create))
+            var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+            try
             {
-                await zipFile.CopyToAsync(stream);
-            }
-
-            var extractedFiles = new List<ExtractedFileInfo>();
-            var warnings = new List<string>();
-
-            using (var archive = ZipFile.OpenRead(tempZipPath))
-            {
-                var normalizedTargetDir = Path.GetFullPath(ExtractDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-
-                foreach (var entry in archive.Entries)
+                using (var stream = new FileStream(tempZipPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
-                    if (string.IsNullOrEmpty(entry.Name))
-                        continue;
+                    await zipFile.CopyToAsync(stream);
+                }
 
-                    // VULNERABLE: No validation before extraction
-                    var fullPath = Path.GetFullPath(Path.Combine(ExtractDirectory, entry.FullName));
+                var extractedFiles = new List<ExtractedFileInfo>();
+                var warnings = new List<string>();
 
-                    var isTraversal = !fullPath.StartsWith(
-                        normalizedTargetDir,
-                        StringComparison.OrdinalIgnoreCase);
+                using (var archive = ZipFile.OpenRead(tempZipPath))
+                {
+                    var normalizedTargetDir = Path.GetFullPath(ExtractDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-                    extractedFiles.Add(new ExtractedFileInfo
+                    foreach (var entry in archive.Entries)
                     {
-                        EntryName = entry.FullName,
-                        ResolvedPath = fullPath,
-                        IsTraversal = isTraversal,
-                        WasExtracted = false
-                    });
+                        if (string.IsNullOrEmpty(entry.Name))
+                            continue;
 
-                    // VULNERABLE: Extract file WITHOUT validation
-                    try
-                    {
-                        var directoryPath = Path.GetDirectoryName(fullPath);
-                        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                        // VULNERABLE: No validation before extraction
+                        var fullPath = Path.GetFullPath(Path.Combine(ExtractDirectory, entry.FullName));
+
+                        var isTraversal = !fullPath.StartsWith(
+                            normalizedTargetDir,
+                            StringComparison.OrdinalIgnoreCase);
+
+                        extractedFiles.Add(new ExtractedFileInfo
                         {
-                            Directory.CreateDirectory(directoryPath);
-                        }
+                            EntryName = entry.FullName,
+                            ResolvedPath = fullPath,
+                            IsTraversal = isTraversal,
+                            WasExtracted = false
+                        });
 
-                        entry.ExtractToFile(fullPath, overwrite: true);
-                        
-                        extractedFiles[extractedFiles.Count - 1].WasExtracted = true;
-
-                        if (isTraversal)
+                        // VULNERABLE: Extract file WITHOUT validation
+                        try
                         {
-                            warnings.Add($"ZIP SLIP DETECTED: '{entry.FullName}' escapes target directory!");
-                            warnings.Add($"Target: {normalizedTargetDir}");
-                            warnings.Add($"Resolved to: {fullPath}");
-                            warnings.Add($"FILE WAS WRITTEN TO DISK!");
+                            var directoryPath = Path.GetDirectoryName(fullPath);
+                            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                            {
+                                Directory.CreateDirectory(directoryPath);
+                            }
+
+                            entry.ExtractToFile(fullPath, overwrite: true);
+                            
+                            extractedFiles[extractedFiles.Count - 1].WasExtracted = true;
+
+                            if (isTraversal)
+                            {
+                                warnings.Add($"ZIP SLIP DETECTED: '{entry.FullName}' escapes target directory!");
+                                warnings.Add($"Target: {normalizedTargetDir}");
+                                warnings.Add($"Resolved to: {fullPath}");
+                                warnings.Add($"FILE WAS WRITTEN TO DISK!");
+                            }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        warnings.Add($"Failed to extract '{entry.FullName}': {ex.Message}");
+                        catch (Exception ex)
+                        {
+                            warnings.Add($"Failed to extract '{entry.FullName}': {ex.Message}");
+                        }
                     }
                 }
-            }
 
-            if (System.IO.File.Exists(tempZipPath))
-            {
-                System.IO.File.Delete(tempZipPath);
+                return Ok(new
+                {
+                    success = true,
+                    targetDirectory = ExtractDirectory,
+                    extractedFiles = extractedFiles,
+                    warnings = warnings,
+                    hasTraversal = warnings.Count > 0
+                });
             }
-
-            return Ok(new
+            finally
             {
-                success = true,
-                targetDirectory = ExtractDirectory,
-                extractedFiles = extractedFiles,
-                warnings = warnings,
-                hasTraversal = warnings.Count > 0
-            });
+                if (System.IO.File.Exists(tempZipPath))
+                {
+                    System.IO.File.Delete(tempZipPath);
+                }
+            }
         }
         catch (Exception ex)
         {
