@@ -42,7 +42,16 @@ public class CatalogImportService
 
     public IReadOnlyList<string> ExtractShipment(string shipmentId, Stream tarStream)
     {
-        var destination = Path.Combine(_importRoot, "shipments", shipmentId);
+        var shipmentsRoot = Path.GetFullPath(Path.Combine(_importRoot, "shipments"));
+        var shipmentsRootWithSeparator = shipmentsRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var destination = Path.GetFullPath(Path.Combine(shipmentsRoot, shipmentId));
+
+        if (!destination.StartsWith(shipmentsRootWithSeparator, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Invalid shipment path.");
+        }
+
         Directory.CreateDirectory(destination);
 
         using (var archive = TarArchive.CreateInputTarArchive(tarStream, Encoding.UTF8))

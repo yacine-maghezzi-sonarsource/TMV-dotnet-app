@@ -45,7 +45,13 @@ public class AccountsController : VulnerabilityDemoControllerBase
     public IActionResult Logout(string returnUrl)
     {
         Response.Cookies.Delete("nw_session");
-        return Redirect(returnUrl);
+
+        if (Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(returnUrl);
+        }
+
+        return Redirect("/");
     }
 
     [HttpGet]

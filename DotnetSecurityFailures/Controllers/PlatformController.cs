@@ -44,7 +44,12 @@ public class PlatformController : VulnerabilityDemoControllerBase
     public async Task<IActionResult> InstallPlugin(string name)
     {
         var client = _httpClientFactory.CreateClient();
-        var bytes = await client.GetByteArrayAsync("http://plugins.northwindpay.internal/" + name);
+        var pluginName = Uri.EscapeDataString(name);
+        var pluginUri = new UriBuilder(Uri.UriSchemeHttps, "plugins.northwindpay.internal")
+        {
+            Query = $"name={pluginName}"
+        }.Uri;
+        var bytes = await client.GetByteArrayAsync(pluginUri);
         var assembly = Assembly.Load(bytes);
         assembly.GetTypes().First().GetMethod("Run")?.Invoke(null, null);
         return Ok(assembly.FullName);
